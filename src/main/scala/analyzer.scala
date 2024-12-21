@@ -12,6 +12,7 @@ import org.apache.spark.sql.execution.SparkSqlParser
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
+import scala.collection.JavaConverters._
 
 import java.net.URI
 
@@ -33,7 +34,7 @@ class V2SessionCatalog(val v1Catalog: SessionCatalog) extends TableCatalog with 
   def renameTable(_1: Identifier, _2: Identifier): Unit = ???
   def alterTable(_1: Identifier, _2: TableChange*): Table = ???
   def createTable(_1: Identifier, _2: StructType, _3: Array[Transform], _4: java.util.Map[String,String]): Table = ???
-  def dropTable(x$1: Identifier): Boolean = ???
+  def dropTable(_1: Identifier): Boolean = ???
 
   override def initialize(name: String, options: CaseInsensitiveStringMap): Unit = {}
 
@@ -52,7 +53,7 @@ class V2SessionCatalog(val v1Catalog: SessionCatalog) extends TableCatalog with 
 
 object CustomSqlAnalyzer {
 
-  private def createCatalogManager(tables: Seq[TableDef]) = {
+  private def createCatalogManager(tables: java.util.List[TableDef]) = {
     val v1Catalog = new SessionCatalog(
       new InMemoryCatalog,
       FunctionRegistry.builtin,
@@ -69,7 +70,7 @@ object CustomSqlAnalyzer {
       ignoreIfExists = true
     )
 
-    tables.foreach { table =>
+    tables.asScala.foreach { table =>
       val metadata = new CatalogTable(
         identifier = TableIdentifier(table.name, Some("default")),
         tableType = CatalogTableType.MANAGED,
@@ -93,7 +94,7 @@ object CustomSqlAnalyzer {
     Tuple2(plan.schema, deps)
   }
 
-  def analyze(sql: String, tables: Seq[TableDef]) = {
+  def analyze(sql: String, tables: java.util.List[TableDef]): LogicalPlan = {
     val catalogManager = createCatalogManager(tables)
     val analyzer = new Analyzer(catalogManager) {
       override def resolver: Resolver = caseInsensitiveResolution

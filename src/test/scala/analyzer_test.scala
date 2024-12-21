@@ -1,6 +1,7 @@
 import org.scalatest.funsuite.AnyFunSuite
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.catalyst.analysis.TableDef
+import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.catalyst.analysis.CustomSqlAnalyzer.{analyze, extractSchemaAndDeps}
 
@@ -8,7 +9,7 @@ class SqlAnalyzerTest extends AnyFunSuite {
   val fooTable = TableDef("foo", StructType(Seq(
     StructField("id", LongType),
     StructField("name", StringType)
-  )))
+  ).asJava))
 
   val barTable = TableDef("bar", StructType(Seq(
     StructField("id", LongType),
@@ -16,14 +17,14 @@ class SqlAnalyzerTest extends AnyFunSuite {
   )))
 
   test("simple select") {
-    val result = extractSchemaAndDeps(analyze("SELECT * FROM foo", Seq(fooTable)))
+    val result = extractSchemaAndDeps(analyze("SELECT * FROM foo", Seq(fooTable).asJava))
     assert(result._1.map(_.name) === Seq("id", "name"))
     assert(result._2 === Set("foo"))
   }
 
   test("missing table reference throws") {
     assertThrows[org.apache.spark.sql.AnalysisException] {
-      analyze("SELECT * FROM missing", Seq(fooTable))
+      analyze("SELECT * FROM missing", Seq(fooTable).asJava)
     }
   }
 
@@ -32,7 +33,7 @@ class SqlAnalyzerTest extends AnyFunSuite {
       SELECT f.id, f.name, b.value
       FROM foo f
       JOIN bar b ON f.id = b.id
-      """, Seq(fooTable, barTable)))
+      """, Seq(fooTable, barTable).asJava))
     assert(result._1.map(_.name) === Seq("id", "name", "value"))
     assert(result._2 === Set("foo", "bar"))
   }
@@ -41,14 +42,14 @@ class SqlAnalyzerTest extends AnyFunSuite {
     val result = extractSchemaAndDeps(analyze("""
       SELECT * FROM
         (SELECT id FROM foo WHERE id > 0) t
-      """, Seq(fooTable)))
+      """, Seq(fooTable).asJava))
     assert(result._1.map(_.name) === Seq("id"))
     assert(result._2 === Set("foo"))
   }
 
   test("empty table context") {
     assertThrows[org.apache.spark.sql.AnalysisException] {
-      analyze("SELECT * FROM foo", Seq.empty)
+      analyze("SELECT * FROM foo", Seq.empty.asJava)
     }
   }
 }
